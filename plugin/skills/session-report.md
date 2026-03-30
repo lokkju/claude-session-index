@@ -3,17 +3,26 @@ name: session-report
 description: >
   Use when asked to look up what was worked on, find sessions from a
   time period, get a work activity overview, or prepare data for
-  summarization. Queries the claude-session-index report tool.
+  summarization. Queries the claude-session-index CLI or MCP tool.
 ---
 
 ## How to Use
 
-1. Call the `report` MCP tool with the appropriate date range:
-   - `since`: duration like '1d', '7d' or ISO date
-   - `until`: optional ISO date for end of range
-   - `project_path`: optional prefix to filter by project location
+1. **Run the report command** (CLI is the primary path):
+   ```bash
+   claude-session-index report --since <range> --json
+   ```
+   Options:
+   - `--since`: duration like `1d`, `7d` or ISO date (default: `1d`)
+   - `--until`: optional ISO date for end of range
+   - `--project-path`: optional prefix to filter by project location
+   - `--limit`: max sessions per project (default: 100)
+   - `--json`: structured JSON output (always use this for programmatic consumption)
 
-2. The response contains sessions grouped by project. Each session includes:
+   If the `session-index` MCP server is available, you can alternatively
+   call the `report` MCP tool with the same parameters.
+
+2. **Parse the JSON output.** Sessions are grouped by project. Each includes:
    - `session_id` — unique identifier for drill-down
    - `project_name`, `project_path`, `git_branch`
    - `first_prompt` — what the user asked
@@ -23,22 +32,36 @@ description: >
    - `created_at`, `modified_at` — time range
    - `message_count` — conversation length
 
-3. For full session content (user prompts, assistant responses, all commands),
-   call `get_session_detail` with the `session_id`.
+3. **Drill into sessions** that need more detail:
+   ```bash
+   claude-session-index search "<query>" --json
+   ```
+   Or for full session content (user prompts, assistant text, all commands):
+   ```bash
+   python -c "
+   from claude_session_index.config import DB_PATH
+   from claude_session_index.db import init_db, get_session
+   import json
+   conn = init_db(DB_PATH)
+   print(json.dumps(get_session(conn, '<session_id>'), indent=2))
+   conn.close()
+   "
+   ```
+   If the MCP server is available, use `get_session_detail(session_id="...")` instead.
 
-## Example
+## Examples
 
-To find what was worked on today:
-```
-report(since="1d")
-```
-
-To find all work under a project tree last week:
-```
-report(since="7d", project_path="/home/user/projects")
+Today's work:
+```bash
+claude-session-index report --since 1d --json
 ```
 
-Then drill into a specific session:
+All work under a project tree last week:
+```bash
+claude-session-index report --since 7d --project-path /home/user/projects --json
 ```
-get_session_detail(session_id="deadbeef-1234-...")
+
+Search for sessions about a topic:
+```bash
+claude-session-index search "authentication" --json
 ```
