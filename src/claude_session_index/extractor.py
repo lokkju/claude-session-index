@@ -190,9 +190,11 @@ def _extract_tool_use(
             files_changed.add(path)
     elif tool_name == "Bash":
         cmd = tool_input.get("command", "")
-        if cmd and len(cmd) <= COMMAND_MAX_LEN:
-            commands_run.append(cmd)
+        if cmd:
+            # Extract commit messages from full command before truncation
             _extract_commit_message(cmd, commit_messages)
+            if len(cmd) <= COMMAND_MAX_LEN:
+                commands_run.append(cmd)
 
 
 def _extract_commit_message(cmd: str, messages: list[str]) -> None:
