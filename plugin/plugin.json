@@ -1,0 +1,5 @@
+{
+  "name": "claude-session-index",
+  "description": "Auto-indexes Claude Code sessions on session end",
+  "version": "0.1.0"
+}

@@ -1,0 +1,6 @@
+[Unit]
+Description=Index Claude Code sessions
+
+[Service]
+Type=oneshot
+ExecStart=uv run --project %h/projects/lokkju/claude-session-index claude-session-index index
