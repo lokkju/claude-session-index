@@ -10,6 +10,8 @@ from claude_session_index.db import (
     get_stats,
     init_db,
     list_sessions,
+    rebuild_fts,
+    report_sessions,
     set_file_mtime,
     upsert_session,
 )
@@ -177,3 +179,125 @@ class TestGetStats:
         assert stats["total_sessions"] == 1
         assert stats["total_projects"] == 1
         assert "myapp" in stats["sessions_by_project"]
+
+
+class TestReportSessions:
+    def _insert_sessions(self, db_conn: sqlite3.Connection):
+        """Insert multiple sessions across projects for report testing."""
+        sessions = [
+            SessionData(
+                session_id="s1",
+                project_path="/home/user/projects/myapp",
+                project_name="myapp",
+                git_branch="feat/login",
+                created_at="2026-03-30T09:00:00+00:00",
+                modified_at="2026-03-30T10:00:00+00:00",
+                first_prompt="Add login page",
+                user_prompts="Add login page",
+                assistant_text="I'll create the login page.",
+                files_changed=["src/login.py", "tests/test_login.py"],
+                commit_messages=["feat: add login page"],
+                message_count=8,
+            ),
+            SessionData(
+                session_id="s2",
+                project_path="/home/user/projects/myapp",
+                project_name="myapp",
+                git_branch="feat/login",
+                created_at="2026-03-30T14:00:00+00:00",
+                modified_at="2026-03-30T15:00:00+00:00",
+                first_prompt="Fix login validation",
+                user_prompts="Fix login validation",
+                assistant_text="I'll fix the validation.",
+                files_changed=["src/login.py"],
+                commit_messages=["fix: login validation"],
+                message_count=5,
+            ),
+            SessionData(
+                session_id="s3",
+                project_path="/home/user/projects/infra",
+                project_name="infra",
+                git_branch="main",
+                created_at="2026-03-30T11:00:00+00:00",
+                modified_at="2026-03-30T12:00:00+00:00",
+                first_prompt="Update terraform modules",
+                user_prompts="Update terraform modules",
+                assistant_text="I'll update the modules.",
+                files_changed=["modules/vpc/main.tf"],
+                commit_messages=["chore: update vpc module"],
+                message_count=4,
+            ),
+            SessionData(
+                session_id="s4",
+                project_path="/home/other/work/tool",
+                project_name="tool",
+                git_branch="main",
+                created_at="2026-03-29T10:00:00+00:00",
+                modified_at="2026-03-29T11:00:00+00:00",
+                first_prompt="Old session from yesterday",
+                user_prompts="Old session",
+                assistant_text="Done.",
+                message_count=2,
+            ),
+        ]
+        for s in sessions:
+            upsert_session(db_conn, s, source="transcript")
+
+    def test_groups_by_project(self, db_conn: sqlite3.Connection):
+        self._insert_sessions(db_conn)
+        result = report_sessions(db_conn)
+        assert "myapp" in result["projects"]
+        assert "infra" in result["projects"]
+        assert len(result["projects"]["myapp"]) == 2
+        assert len(result["projects"]["infra"]) == 1
+
+    def test_sorted_by_created_at(self, db_conn: sqlite3.Connection):
+        self._insert_sessions(db_conn)
+        result = report_sessions(db_conn)
+        myapp = result["projects"]["myapp"]
+        assert myapp[0]["session_id"] == "s1"
+        assert myapp[1]["session_id"] == "s2"
+
+    def test_since_filter(self, db_conn: sqlite3.Connection):
+        self._insert_sessions(db_conn)
+        result = report_sessions(db_conn, since="2026-03-30")
+        assert "tool" not in result["projects"]
+        assert "myapp" in result["projects"]
+
+    def test_until_filter(self, db_conn: sqlite3.Connection):
+        self._insert_sessions(db_conn)
+        result = report_sessions(
+            db_conn, until="2026-03-29T23:59:59"
+        )
+        assert "myapp" not in result["projects"]
+        assert "tool" in result["projects"]
+
+    def test_project_path_prefix(self, db_conn: sqlite3.Connection):
+        self._insert_sessions(db_conn)
+        result = report_sessions(
+            db_conn, project_path_prefix="/home/user/projects"
+        )
+        assert "myapp" in result["projects"]
+        assert "infra" in result["projects"]
+        assert "tool" not in result["projects"]
+
+    def test_splits_newline_fields(self, db_conn: sqlite3.Connection):
+        self._insert_sessions(db_conn)
+        result = report_sessions(db_conn)
+        s1 = result["projects"]["myapp"][0]
+        assert isinstance(s1["files_changed"], list)
+        assert "src/login.py" in s1["files_changed"]
+        assert isinstance(s1["commit_messages"], list)
+        assert "feat: add login page" in s1["commit_messages"]
+
+    def test_counts(self, db_conn: sqlite3.Connection):
+        self._insert_sessions(db_conn)
+        result = report_sessions(db_conn)
+        assert result["project_count"] >= 2
+        assert result["session_count"] >= 3
+
+    def test_empty_result(self, db_conn: sqlite3.Connection):
+        result = report_sessions(db_conn, since="2099-01-01")
+        assert result["projects"] == {}
+        assert result["session_count"] == 0
+        assert result["project_count"] == 0

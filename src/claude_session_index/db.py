@@ -260,6 +260,86 @@ def get_stats(conn: sqlite3.Connection, since: str | None = None) -> dict:
     }
 
 
+def report_sessions(
+    conn: sqlite3.Connection,
+    since: str | None = None,
+    until: str | None = None,
+    project_path_prefix: str | None = None,
+    limit: int = 100,
+) -> dict:
+    """Get sessions grouped by project for a date range."""
+    from claude_session_index.config import since_cutoff, until_cutoff
+
+    conditions: list[str] = []
+    params: list[str | int] = []
+
+    since_iso = None
+    until_iso = None
+
+    if since:
+        cutoff = since_cutoff(since)
+        since_iso = cutoff.isoformat()
+        conditions.append("created_at >= ?")
+        params.append(since_iso)
+    if until:
+        cutoff = until_cutoff(until)
+        until_iso = cutoff.isoformat()
+        conditions.append("created_at <= ?")
+        params.append(until_iso)
+    if project_path_prefix:
+        conditions.append("project_path LIKE ?")
+        params.append(project_path_prefix + "%")
+
+    where = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+    rows = conn.execute(
+        f"""
+        SELECT session_id, project_path, project_name, git_branch,
+               summary, first_prompt, files_changed, commit_messages,
+               created_at, modified_at, message_count
+        FROM sessions
+        {where}
+        ORDER BY project_name ASC, created_at ASC
+        """,
+        params,
+    ).fetchall()
+
+    projects: dict[str, list[dict]] = {}
+    for row in rows:
+        entry = {
+            "session_id": row[0],
+            "project_path": row[1],
+            "project_name": row[2],
+            "git_branch": row[3],
+            "summary": row[4],
+            "first_prompt": row[5],
+            "files_changed": [
+                f for f in (row[6] or "").split("\n") if f.strip()
+            ],
+            "commit_messages": [
+                m for m in (row[7] or "").split("\n") if m.strip()
+            ],
+            "created_at": row[8],
+            "modified_at": row[9],
+            "message_count": row[10],
+        }
+        proj = entry["project_name"]
+        if proj not in projects:
+            projects[proj] = []
+        if len(projects[proj]) < limit:
+            projects[proj].append(entry)
+
+    session_count = sum(len(v) for v in projects.values())
+
+    return {
+        "since": since_iso,
+        "until": until_iso,
+        "project_count": len(projects),
+        "session_count": session_count,
+        "projects": projects,
+    }
+
+
 def get_file_mtime(conn: sqlite3.Connection, file_path: str) -> float | None:
     """Get the stored mtime for a file."""
     row = conn.execute(
