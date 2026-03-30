@@ -5,7 +5,7 @@ import json
 from fastmcp import FastMCP
 
 from claude_session_index.config import DB_PATH
-from claude_session_index.db import get_session, get_stats, init_db, list_sessions
+from claude_session_index.db import get_session, get_stats, init_db, list_sessions, report_sessions
 from claude_session_index.search import search_sessions
 
 
@@ -111,6 +111,35 @@ def create_server() -> FastMCP:
                 "project_path": result["project_path"],
                 "resume_command": ["claude", "--resume", session_id],
             }, indent=2)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def report(
+        since: str = "1d",
+        until: str | None = None,
+        project_path: str | None = None,
+        limit: int = 100,
+    ) -> str:
+        """Get a structured report of all sessions within a date range,
+        grouped by project.
+
+        Use this to understand what was worked on during a time period.
+        For detailed session content, follow up with get_session_detail.
+
+        Args:
+            since: Start of range — duration like '1d', '7d' or ISO date (default: '1d')
+            until: End of range — ISO date (default: now)
+            project_path: Filter to sessions under this path prefix
+            limit: Max sessions per project (default 100)
+        """
+        conn = init_db(DB_PATH)
+        try:
+            result = report_sessions(
+                conn, since=since, until=until,
+                project_path_prefix=project_path, limit=limit,
+            )
+            return json.dumps(result, indent=2)
         finally:
             conn.close()
 
