@@ -10,7 +10,6 @@ from claude_session_index.db import (
     get_stats,
     init_db,
     list_sessions,
-    rebuild_fts,
     set_file_mtime,
     upsert_session,
 )
@@ -85,7 +84,9 @@ class TestUpsertSession:
         assert row[0] == 10
         assert row[1] == "main"
 
-    def test_lists_as_newline_separated(self, db_conn: sqlite3.Connection, sample_session_data: SessionData):
+    def test_lists_as_newline_separated(
+        self, db_conn: sqlite3.Connection, sample_session_data: SessionData
+    ):
         upsert_session(db_conn, sample_session_data, source="transcript")
         row = db_conn.execute(
             "SELECT files_changed, commit_messages FROM sessions WHERE session_id = ?",

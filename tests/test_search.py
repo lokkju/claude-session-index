@@ -25,8 +25,12 @@ def _make_session(session_id: str, project_name: str, first_prompt: str, **kwarg
 
 class TestSearchSessions:
     def test_basic_search(self, db_conn: sqlite3.Connection):
-        upsert_session(db_conn, _make_session("s1", "myapp", "fix the login bug"), source="transcript")
-        upsert_session(db_conn, _make_session("s2", "myapp", "add dark mode theme"), source="transcript")
+        upsert_session(
+            db_conn, _make_session("s1", "myapp", "fix the login bug"), source="transcript"
+        )
+        upsert_session(
+            db_conn, _make_session("s2", "myapp", "add dark mode theme"), source="transcript"
+        )
         rebuild_fts(db_conn)
 
         results = search_sessions(db_conn, "login bug")
@@ -34,7 +38,9 @@ class TestSearchSessions:
         assert results[0]["session_id"] == "s1"
 
     def test_search_returns_score(self, db_conn: sqlite3.Connection):
-        upsert_session(db_conn, _make_session("s1", "myapp", "fix the login bug"), source="transcript")
+        upsert_session(
+            db_conn, _make_session("s1", "myapp", "fix the login bug"), source="transcript"
+        )
         rebuild_fts(db_conn)
 
         results = search_sessions(db_conn, "login")
@@ -72,7 +78,10 @@ class TestSearchSessions:
     def test_searches_commit_messages(self, db_conn: sqlite3.Connection):
         upsert_session(
             db_conn,
-            _make_session("s1", "myapp", "do some work", commit_messages=["refactor: extract auth middleware"]),
+            _make_session(
+                "s1", "myapp", "do some work",
+                commit_messages=["refactor: extract auth middleware"],
+            ),
             source="transcript",
         )
         rebuild_fts(db_conn)

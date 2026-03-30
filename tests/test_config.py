@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 import pytest
 
@@ -27,9 +27,9 @@ class TestParseDuration:
 class TestSinceCutoff:
     def test_duration_string(self):
         cutoff = since_cutoff("1d")
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         diff = now - cutoff
         assert 86390 < diff.total_seconds() < 86410
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from claude_session_index.extractor import SessionData
@@ -55,7 +55,7 @@ def init_db(db_path: Path) -> sqlite3.Connection:
 
 def upsert_session(conn: sqlite3.Connection, session: SessionData, source: str) -> None:
     """Insert or update a session record."""
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     conn.execute(
         """
         INSERT INTO sessions (
@@ -67,15 +67,32 @@ def upsert_session(conn: sqlite3.Connection, session: SessionData, source: str) 
         ON CONFLICT(session_id) DO UPDATE SET
             project_path = excluded.project_path,
             project_name = excluded.project_name,
-            first_prompt = CASE WHEN excluded.first_prompt != '' THEN excluded.first_prompt ELSE sessions.first_prompt END,
-            user_prompts = CASE WHEN excluded.user_prompts != '' THEN excluded.user_prompts ELSE sessions.user_prompts END,
-            assistant_text = CASE WHEN excluded.assistant_text != '' THEN excluded.assistant_text ELSE sessions.assistant_text END,
-            files_changed = CASE WHEN excluded.files_changed != '' THEN excluded.files_changed ELSE sessions.files_changed END,
-            commands_run = CASE WHEN excluded.commands_run != '' THEN excluded.commands_run ELSE sessions.commands_run END,
-            commit_messages = CASE WHEN excluded.commit_messages != '' THEN excluded.commit_messages ELSE sessions.commit_messages END,
-            git_branch = CASE WHEN excluded.git_branch != '' THEN excluded.git_branch ELSE sessions.git_branch END,
+            first_prompt = CASE
+                WHEN excluded.first_prompt != '' THEN excluded.first_prompt
+                ELSE sessions.first_prompt END,
+            user_prompts = CASE
+                WHEN excluded.user_prompts != '' THEN excluded.user_prompts
+                ELSE sessions.user_prompts END,
+            assistant_text = CASE
+                WHEN excluded.assistant_text != '' THEN excluded.assistant_text
+                ELSE sessions.assistant_text END,
+            files_changed = CASE
+                WHEN excluded.files_changed != '' THEN excluded.files_changed
+                ELSE sessions.files_changed END,
+            commands_run = CASE
+                WHEN excluded.commands_run != '' THEN excluded.commands_run
+                ELSE sessions.commands_run END,
+            commit_messages = CASE
+                WHEN excluded.commit_messages != '' THEN excluded.commit_messages
+                ELSE sessions.commit_messages END,
+            git_branch = CASE
+                WHEN excluded.git_branch != '' THEN excluded.git_branch
+                ELSE sessions.git_branch END,
             modified_at = excluded.modified_at,
-            message_count = CASE WHEN excluded.message_count > sessions.message_count THEN excluded.message_count ELSE sessions.message_count END,
+            message_count = CASE
+                WHEN excluded.message_count > sessions.message_count
+                THEN excluded.message_count
+                ELSE sessions.message_count END,
             source = excluded.source,
             indexed_at = excluded.indexed_at
         """,
@@ -210,13 +227,15 @@ def get_stats(conn: sqlite3.Connection, since: str | None = None) -> dict:
     ).fetchone()[0]
 
     by_project_rows = conn.execute(
-        f"SELECT project_name, count(*) as cnt FROM sessions {where} GROUP BY project_name ORDER BY cnt DESC",
+        f"SELECT project_name, count(*) as cnt FROM sessions {where}"
+        " GROUP BY project_name ORDER BY cnt DESC",
         params,
     ).fetchall()
     by_project = {row[0]: row[1] for row in by_project_rows}
 
     by_date_rows = conn.execute(
-        f"SELECT substr(created_at, 1, 10) as day, count(*) as cnt FROM sessions {where} GROUP BY day ORDER BY day DESC LIMIT 30",
+        f"SELECT substr(created_at, 1, 10) as day, count(*) as cnt FROM sessions {where}"
+        " GROUP BY day ORDER BY day DESC LIMIT 30",
         params,
     ).fetchall()
     by_date = {row[0]: row[1] for row in by_date_rows}

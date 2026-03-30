@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
-from pathlib import Path
 import sqlite3
+from datetime import UTC, datetime
+from pathlib import Path
 
 from claude_session_index.config import HISTORY_FILE, MAX_FILE_SIZE, PROJECTS_DIR
 from claude_session_index.db import (
@@ -18,7 +18,8 @@ from claude_session_index.db import (
 from claude_session_index.extractor import SessionData, extract_session
 
 _UUID_RE = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
 )
 
 
@@ -117,7 +118,7 @@ def index_transcripts(
 
             # Apply since filter
             if since_cutoff:
-                mod_dt = datetime.fromtimestamp(current_mtime, tz=timezone.utc)
+                mod_dt = datetime.fromtimestamp(current_mtime, tz=UTC)
                 if mod_dt < since_cutoff:
                     continue
 
@@ -162,7 +163,7 @@ def index_history(
                 continue
 
             # Convert timestamp
-            ts = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+            ts = datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
             created_at = ts.isoformat()
 
             if since_cutoff and ts < since_cutoff:

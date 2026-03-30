@@ -14,7 +14,9 @@ app = typer.Typer(name="claude-session-index", help="Index and search Claude Cod
 @app.command()
 def index(
     full: bool = typer.Option(False, "--full", help="Full rebuild — reprocess all files"),
-    since: str | None = typer.Option(None, "--since", help="Only process files modified within duration (e.g. 7d, 30d)"),
+    since: str | None = typer.Option(
+        None, "--since", help="Only process files modified within duration (e.g. 7d, 30d)"
+    ),
 ) -> None:
     """Index Claude Code sessions into the database."""
     from claude_session_index.db import init_db

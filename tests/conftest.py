@@ -49,7 +49,10 @@ def sample_session_data():  # noqa: ANN201
         user_prompts="Add a greeting function to hello.py\nNow commit this with a nice message",
         assistant_text="I'll create a greeting function for you.\nI'll commit the changes.",
         files_changed=["/home/user/projects/myapp/hello.py"],
-        commands_run=["uv run pytest tests/ -v", 'git add hello.py && git commit -m "feat: add greeting function"'],
+        commands_run=[
+            "uv run pytest tests/ -v",
+            'git add hello.py && git commit -m "feat: add greeting function"',
+        ],
         commit_messages=["feat: add greeting function"],
         message_count=4,
     )

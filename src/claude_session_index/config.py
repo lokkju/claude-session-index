@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 CLAUDE_DIR = Path.home() / ".claude"
@@ -39,7 +39,7 @@ def since_cutoff(since: str) -> datetime:
     """Convert a duration string or ISO date into a UTC datetime cutoff."""
     try:
         delta = parse_duration(since)
-        return datetime.now(timezone.utc) - delta
+        return datetime.now(UTC) - delta
     except ValueError:
         pass
     # Try ISO date
@@ -50,5 +50,5 @@ def since_cutoff(since: str) -> datetime:
             f"'{since}' is not a valid duration (e.g. '7d', '24h') or ISO date (e.g. '2026-03-01')."
         ) from None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt

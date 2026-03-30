@@ -4,7 +4,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from claude_session_index.db import get_session, init_db, rebuild_fts
+from claude_session_index.db import get_session, init_db
 from claude_session_index.indexer import (
     index_all,
     index_history,
@@ -14,7 +14,9 @@ from claude_session_index.indexer import (
 
 
 class TestIndexSessionsIndex:
-    def test_indexes_entries(self, db_conn: sqlite3.Connection, sample_index_path: Path, tmp_path: Path):
+    def test_indexes_entries(
+        self, db_conn: sqlite3.Connection, sample_index_path: Path, tmp_path: Path
+    ):
         # Create a fake projects dir with the sessions-index.json
         proj_dir = tmp_path / "projects" / "-home-user-projects-myapp"
         proj_dir.mkdir(parents=True)
@@ -33,7 +35,9 @@ class TestIndexSessionsIndex:
 
 
 class TestIndexTranscripts:
-    def test_indexes_jsonl(self, db_conn: sqlite3.Connection, sample_session_path: Path, tmp_path: Path):
+    def test_indexes_jsonl(
+        self, db_conn: sqlite3.Connection, sample_session_path: Path, tmp_path: Path
+    ):
         proj_dir = tmp_path / "projects" / "-home-user-projects-myapp"
         proj_dir.mkdir(parents=True)
         import shutil
@@ -55,17 +59,22 @@ class TestIndexTranscripts:
         count = index_transcripts(db_conn, tmp_path / "projects")
         assert count == 0
 
-    def test_skips_subagents(self, db_conn: sqlite3.Connection, sample_session_path: Path, tmp_path: Path):
+    def test_skips_subagents(
+        self, db_conn: sqlite3.Connection, sample_session_path: Path, tmp_path: Path
+    ):
         proj_dir = tmp_path / "projects" / "-home-user-projects-myapp"
         subagent_dir = proj_dir / "deadbeef-1234-5678-9abc-def012345678" / "subagents"
         subagent_dir.mkdir(parents=True)
         import shutil
-        shutil.copy(sample_session_path, subagent_dir / "aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl")
+        dest_name = "aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl"
+        shutil.copy(sample_session_path, subagent_dir / dest_name)
 
         count = index_transcripts(db_conn, tmp_path / "projects")
         assert count == 0
 
-    def test_incremental_skips_unchanged(self, db_conn: sqlite3.Connection, sample_session_path: Path, tmp_path: Path):
+    def test_incremental_skips_unchanged(
+        self, db_conn: sqlite3.Connection, sample_session_path: Path, tmp_path: Path
+    ):
         proj_dir = tmp_path / "projects" / "-home-user-projects-myapp"
         proj_dir.mkdir(parents=True)
         import shutil
@@ -84,15 +93,27 @@ class TestIndexHistory:
     def test_indexes_history(self, db_conn: sqlite3.Connection, tmp_path: Path):
         history_file = tmp_path / "history.jsonl"
         entries = [
-            {"display": "fix the auth bug in login.py", "pastedContents": {}, "timestamp": 1710500000000, "project": "/home/user/projects/myapp"},
-            {"display": "add dark mode", "pastedContents": {}, "timestamp": 1710600000000, "project": "/home/user/projects/webapp"},
+            {
+                "display": "fix the auth bug in login.py",
+                "pastedContents": {},
+                "timestamp": 1710500000000,
+                "project": "/home/user/projects/myapp",
+            },
+            {
+                "display": "add dark mode",
+                "pastedContents": {},
+                "timestamp": 1710600000000,
+                "project": "/home/user/projects/webapp",
+            },
         ]
         history_file.write_text("\n".join(json.dumps(e) for e in entries))
 
         count = index_history(db_conn, history_file)
         assert count == 2
 
-    def test_skips_already_indexed(self, db_conn: sqlite3.Connection, tmp_path: Path, sample_session_path: Path):
+    def test_skips_already_indexed(
+        self, db_conn: sqlite3.Connection, tmp_path: Path, sample_session_path: Path
+    ):
         """History should not overwrite sessions already indexed from transcripts."""
         # First, index a transcript
         proj_dir = tmp_path / "projects" / "-home-user-projects-myapp"
@@ -105,7 +126,13 @@ class TestIndexHistory:
         # Now create history that references the same session
         history_file = tmp_path / "history.jsonl"
         entries = [
-            {"display": "some other prompt", "pastedContents": {}, "timestamp": 1710500000000, "project": "/home/user/projects/myapp", "sessionId": "deadbeef-1234-5678-9abc-def012345678"},
+            {
+                "display": "some other prompt",
+                "pastedContents": {},
+                "timestamp": 1710500000000,
+                "project": "/home/user/projects/myapp",
+                "sessionId": "deadbeef-1234-5678-9abc-def012345678",
+            },
         ]
         history_file.write_text("\n".join(json.dumps(e) for e in entries))
 
@@ -118,7 +145,9 @@ class TestIndexHistory:
 
 
 class TestIndexAll:
-    def test_full_pipeline(self, tmp_path: Path, sample_session_path: Path, sample_index_path: Path):
+    def test_full_pipeline(
+        self, tmp_path: Path, sample_session_path: Path, sample_index_path: Path
+    ):
         db_path = tmp_path / "test.db"
         conn = init_db(db_path)
 
