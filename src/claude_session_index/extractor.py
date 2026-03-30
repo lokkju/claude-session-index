@@ -34,8 +34,13 @@ class SessionData:
     parent_session_id: str = ""
 
 
-_COMMIT_INLINE_RE = re.compile(r'git\s+commit\s+.*?-m\s+["\'](.+?)["\']', re.DOTALL)
+_COMMIT_INLINE_RE = re.compile(
+    r'git\s+(?:.*?\s+)?commit\s+.*?-m\s+["\'](.+?)["\']', re.DOTALL
+)
 _COMMIT_HEREDOC_RE = re.compile(r"cat\s+<<\s*'?EOF'?\n(.+?)\nEOF", re.DOTALL)
+_COMMIT_FILE_RE = re.compile(
+    r"git\s+(?:.*?\s+)?commit\s+.*?-F\s+-\s+<<\s*'?EOF'?\n(.+?)\nEOF", re.DOTALL
+)
 
 
 def extract_session(file_path: Path) -> SessionData | None:
@@ -199,12 +204,20 @@ def _extract_tool_use(
 
 def _extract_commit_message(cmd: str, messages: list[str]) -> None:
     """Extract commit message from a git commit command string."""
-    if "git commit" not in cmd:
+    if "commit" not in cmd:
         return
+    # Try git commit -F - <<EOF pattern first (most specific)
+    m = _COMMIT_FILE_RE.search(cmd)
+    if m:
+        # Take just the first line (subject) of multi-line messages
+        messages.append(m.group(1).strip().split("\n")[0])
+        return
+    # Try cat <<EOF heredoc pattern (used with $(cat <<'EOF' ... EOF))
     m = _COMMIT_HEREDOC_RE.search(cmd)
     if m:
-        messages.append(m.group(1).strip())
+        messages.append(m.group(1).strip().split("\n")[0])
         return
+    # Try inline -m pattern
     m = _COMMIT_INLINE_RE.search(cmd)
     if m:
         messages.append(m.group(1).strip())
