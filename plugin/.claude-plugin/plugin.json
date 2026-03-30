@@ -1,0 +1,8 @@
+{
+  "name": "claude-session-index",
+  "description": "Index, search, and report on Claude Code sessions. Includes TPS skill for work summarization.",
+  "version": "0.3.0",
+  "author": { "name": "lokkju", "url": "https://github.com/lokkju" },
+  "repository": "https://github.com/lokkju/claude-session-index",
+  "keywords": ["sessions", "indexing", "reporting", "summarization", "tps"]
+}
