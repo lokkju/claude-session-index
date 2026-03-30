@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from claude_session_index.extractor import SessionData, extract_session
 
 
@@ -83,13 +85,8 @@ class TestExtractSession:
         empty.write_text("")
         assert extract_session(empty) is None
 
-    def test_skips_oversized_files(self, tmp_path: Path):
+    def test_skips_oversized_files(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         big = tmp_path / "big.jsonl"
         big.write_text("x")
-        import claude_session_index.config as cfg
-        original = cfg.MAX_FILE_SIZE
-        cfg.MAX_FILE_SIZE = 0
-        try:
-            assert extract_session(big) is None
-        finally:
-            cfg.MAX_FILE_SIZE = original
+        monkeypatch.setattr("claude_session_index.config.MAX_FILE_SIZE", 0)
+        assert extract_session(big) is None

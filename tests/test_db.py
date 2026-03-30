@@ -144,6 +144,15 @@ class TestListSessions:
         assert len(list_sessions(db_conn, branch="feat/greetings")) == 1
         assert len(list_sessions(db_conn, branch="main")) == 0
 
+    def test_filter_by_since(
+        self, db_conn: sqlite3.Connection, sample_session_data: SessionData
+    ):
+        upsert_session(db_conn, sample_session_data, source="transcript")
+        # Session modified_at is 2026-03-15 — a "since" of that date should match
+        assert len(list_sessions(db_conn, since="2026-03-14")) == 1
+        # A future date should return nothing
+        assert len(list_sessions(db_conn, since="2027-01-01")) == 0
+
     def test_limit(self, db_conn: sqlite3.Connection, sample_session_data: SessionData):
         for i in range(5):
             sd = SessionData(
