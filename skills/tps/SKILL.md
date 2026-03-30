@@ -25,8 +25,8 @@ description: >
 
    If the tool is not installed, tell the user:
    ```
-   claude-session-index is not installed. Install it with:
-   uv tool install claude-session-index
+   claude-session-index is not installed. Install with:
+   uv tool install --from git+https://github.com/lokkju/claude-session-index claude-session-index
    ```
 
 3. **Check for plans and specs.** For each project in the report:

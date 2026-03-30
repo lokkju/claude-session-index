@@ -36,18 +36,15 @@ description: >
    ```bash
    claude-session-index search "<query>" --json
    ```
-   Or for full session content (user prompts, assistant text, all commands):
-   ```bash
-   python -c "
-   from claude_session_index.config import DB_PATH
-   from claude_session_index.db import init_db, get_session
-   import json
-   conn = init_db(DB_PATH)
-   print(json.dumps(get_session(conn, '<session_id>'), indent=2))
-   conn.close()
-   "
+   If the `session-index` MCP server is available, use
+   `get_session_detail(session_id="...")` for full session content
+   (user prompts, assistant text, all commands).
+
+   If the tool is not installed, tell the user:
    ```
-   If the MCP server is available, use `get_session_detail(session_id="...")` instead.
+   claude-session-index is not installed. Install with:
+   uv tool install --from git+https://github.com/lokkju/claude-session-index claude-session-index
+   ```
 
 ## Examples
 
