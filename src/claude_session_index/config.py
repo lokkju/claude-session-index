@@ -43,7 +43,12 @@ def since_cutoff(since: str) -> datetime:
     except ValueError:
         pass
     # Try ISO date
-    dt = datetime.fromisoformat(since)
+    try:
+        dt = datetime.fromisoformat(since)
+    except ValueError:
+        raise ValueError(
+            f"'{since}' is not a valid duration (e.g. '7d', '24h') or ISO date (e.g. '2026-03-01')."
+        ) from None
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt

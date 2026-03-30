@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-
-from claude_session_index.db import init_db
-from claude_session_index.extractor import SessionData
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -27,7 +25,9 @@ def sample_index_path(fixtures_dir: Path) -> Path:
 
 
 @pytest.fixture
-def db_conn(tmp_path: Path) -> sqlite3.Connection:
+def db_conn(tmp_path: Path) -> Iterator[sqlite3.Connection]:
+    from claude_session_index.db import init_db
+
     db_path = tmp_path / "test.db"
     conn = init_db(db_path)
     yield conn
@@ -35,7 +35,9 @@ def db_conn(tmp_path: Path) -> sqlite3.Connection:
 
 
 @pytest.fixture
-def sample_session_data() -> SessionData:
+def sample_session_data():  # noqa: ANN201
+    from claude_session_index.extractor import SessionData
+
     return SessionData(
         session_id="deadbeef-1234-5678-9abc-def012345678",
         project_path="/home/user/projects/myapp",
