@@ -2,7 +2,7 @@ from datetime import UTC, timedelta
 
 import pytest
 
-from claude_session_index.config import parse_duration, since_cutoff
+from claude_session_index.config import parse_duration, since_cutoff, until_cutoff
 
 
 class TestParseDuration:
@@ -38,3 +38,19 @@ class TestSinceCutoff:
         assert cutoff.year == 2026
         assert cutoff.month == 3
         assert cutoff.day == 1
+
+
+class TestUntilCutoff:
+    def test_iso_date(self):
+        cutoff = until_cutoff("2026-03-30")
+        assert cutoff.year == 2026
+        assert cutoff.month == 3
+        assert cutoff.day == 30
+
+    def test_iso_datetime(self):
+        cutoff = until_cutoff("2026-03-30T18:00:00")
+        assert cutoff.hour == 18
+
+    def test_invalid_raises(self):
+        with pytest.raises(ValueError, match="not a valid ISO date"):
+            until_cutoff("garbage")

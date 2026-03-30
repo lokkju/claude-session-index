@@ -52,3 +52,16 @@ def since_cutoff(since: str) -> datetime:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=UTC)
     return dt
+
+
+def until_cutoff(until: str) -> datetime:
+    """Convert an ISO date string into a UTC datetime upper bound."""
+    try:
+        dt = datetime.fromisoformat(until)
+    except ValueError:
+        raise ValueError(
+            f"'{until}' is not a valid ISO date (e.g. '2026-03-30')."
+        ) from None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt
