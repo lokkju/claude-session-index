@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "claude-session-index"
+dynamic = ["version"]
+description = "Index Claude Code sessions into searchable SQLite FTS5"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+license-files = ["LICENSE"]
+dependencies = [
+    "typer>=0.9",
+    "fastmcp>=2.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "pyright>=1.1",
+]
+
+[project.scripts]
+claude-session-index = "claude_session_index.cli:app"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/claude_session_index"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+typeCheckingMode = "basic"
+pythonVersion = "3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
