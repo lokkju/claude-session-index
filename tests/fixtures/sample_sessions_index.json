@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "sessionId": "idx-session-aaaa-bbbb-cccc-ddddeeee0001",
+      "fullPath": "/home/user/.claude/projects/-home-user-projects-myapp/idx-session-aaaa-bbbb-cccc-ddddeeee0001.jsonl",
+      "fileMtime": 1710500000000,
+      "firstPrompt": "Add a greeting function to hello.py",
+      "summary": "Added greeting function with tests",
+      "messageCount": 12,
+      "created": "2026-03-15T10:00:00.000Z",
+      "modified": "2026-03-15T11:00:00.000Z",
+      "gitBranch": "feat/greetings",
+      "projectPath": "/home/user/projects/myapp",
+      "isSidechain": false
+    },
+    {
+      "sessionId": "idx-session-aaaa-bbbb-cccc-ddddeeee0002",
+      "fullPath": "/home/user/.claude/projects/-home-user-projects-myapp/idx-session-aaaa-bbbb-cccc-ddddeeee0002.jsonl",
+      "fileMtime": 1710600000000,
+      "firstPrompt": "Fix the login bug in auth.py",
+      "summary": "Fixed authentication timeout issue",
+      "messageCount": 8,
+      "created": "2026-03-16T09:00:00.000Z",
+      "modified": "2026-03-16T10:30:00.000Z",
+      "gitBranch": "fix/auth-timeout",
+      "projectPath": "/home/user/projects/myapp",
+      "isSidechain": false
+    }
+  ],
+  "originalPath": "/home/user/projects/myapp"
+}
