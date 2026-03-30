@@ -31,6 +31,7 @@ class SessionData:
     commands_run: list[str] = field(default_factory=list)
     commit_messages: list[str] = field(default_factory=list)
     message_count: int = 0
+    parent_session_id: str = ""
 
 
 _COMMIT_INLINE_RE = re.compile(r'git\s+commit\s+.*?-m\s+["\'](.+?)["\']', re.DOTALL)

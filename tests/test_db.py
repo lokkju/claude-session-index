@@ -35,7 +35,7 @@ class TestInitDb:
             "first_prompt", "user_prompts", "assistant_text", "files_changed",
             "commands_run", "commit_messages", "git_branch", "created_at",
             "modified_at", "message_count", "keywords", "tags", "source",
-            "indexed_at",
+            "indexed_at", "parent_session_id",
         }
         assert expected == columns
 
@@ -300,3 +300,113 @@ class TestReportSessions:
         assert result["projects"] == {}
         assert result["session_count"] == 0
         assert result["project_count"] == 0
+
+    def test_excludes_subagents_by_default(
+        self, db_conn: sqlite3.Connection
+    ):
+        self._insert_sessions(db_conn)
+        # Add a subagent session
+        sub = SessionData(
+            session_id="sub-agent-1",
+            project_path="/home/user/projects/myapp",
+            project_name="myapp",
+            git_branch="feat/login",
+            created_at="2026-03-30T09:30:00+00:00",
+            modified_at="2026-03-30T09:45:00+00:00",
+            first_prompt="Implement the login form",
+            user_prompts="Implement the login form",
+            assistant_text="Done.",
+            commit_messages=["feat: implement login form"],
+            message_count=20,
+            parent_session_id="s1",
+        )
+        upsert_session(db_conn, sub, source="transcript")
+        result = report_sessions(db_conn)
+        # Subagent should NOT appear in default report
+        myapp_ids = [s["session_id"] for s in result["projects"]["myapp"]]
+        assert "sub-agent-1" not in myapp_ids
+
+    def test_includes_subagents_when_requested(
+        self, db_conn: sqlite3.Connection
+    ):
+        self._insert_sessions(db_conn)
+        sub = SessionData(
+            session_id="sub-agent-1",
+            project_path="/home/user/projects/myapp",
+            project_name="myapp",
+            git_branch="feat/login",
+            created_at="2026-03-30T09:30:00+00:00",
+            modified_at="2026-03-30T09:45:00+00:00",
+            first_prompt="Implement the login form",
+            user_prompts="Implement the login form",
+            assistant_text="Done.",
+            commit_messages=["feat: implement login form"],
+            message_count=20,
+            parent_session_id="s1",
+        )
+        upsert_session(db_conn, sub, source="transcript")
+        result = report_sessions(db_conn, include_subagents=True)
+        myapp_ids = [s["session_id"] for s in result["projects"]["myapp"]]
+        assert "sub-agent-1" in myapp_ids
+
+
+class TestGetSessionSubagents:
+    def test_returns_subagent_ids(self, db_conn: sqlite3.Connection):
+        parent = SessionData(
+            session_id="parent-1",
+            project_path="/tmp/proj",
+            project_name="proj",
+            git_branch="main",
+            created_at="2026-03-30T10:00:00Z",
+            modified_at="2026-03-30T11:00:00Z",
+            first_prompt="do stuff",
+            user_prompts="do stuff",
+            assistant_text="done",
+        )
+        sub1 = SessionData(
+            session_id="sub-1",
+            project_path="/tmp/proj",
+            project_name="proj",
+            git_branch="main",
+            created_at="2026-03-30T10:05:00Z",
+            modified_at="2026-03-30T10:10:00Z",
+            first_prompt="task 1",
+            user_prompts="task 1",
+            assistant_text="done",
+            parent_session_id="parent-1",
+        )
+        sub2 = SessionData(
+            session_id="sub-2",
+            project_path="/tmp/proj",
+            project_name="proj",
+            git_branch="main",
+            created_at="2026-03-30T10:15:00Z",
+            modified_at="2026-03-30T10:20:00Z",
+            first_prompt="task 2",
+            user_prompts="task 2",
+            assistant_text="done",
+            parent_session_id="parent-1",
+        )
+        upsert_session(db_conn, parent, source="transcript")
+        upsert_session(db_conn, sub1, source="transcript")
+        upsert_session(db_conn, sub2, source="transcript")
+
+        result = get_session(db_conn, "parent-1")
+        assert result is not None
+        assert set(result["subagent_session_ids"]) == {"sub-1", "sub-2"}
+
+    def test_no_subagents(self, db_conn: sqlite3.Connection):
+        session = SessionData(
+            session_id="lonely",
+            project_path="/tmp/proj",
+            project_name="proj",
+            git_branch="main",
+            created_at="2026-03-30T10:00:00Z",
+            modified_at="2026-03-30T11:00:00Z",
+            first_prompt="solo work",
+            user_prompts="solo work",
+            assistant_text="done",
+        )
+        upsert_session(db_conn, session, source="transcript")
+        result = get_session(db_conn, "lonely")
+        assert result["subagent_session_ids"] == []

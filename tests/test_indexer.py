@@ -59,18 +59,40 @@ class TestIndexTranscripts:
         count = index_transcripts(db_conn, tmp_path / "projects")
         assert count == 0
 
-    def test_skips_subagents(
-        self, db_conn: sqlite3.Connection, sample_session_path: Path, tmp_path: Path
+    def test_indexes_subagents(
+        self,
+        db_conn: sqlite3.Connection,
+        sample_session_path: Path,
+        tmp_path: Path,
     ):
         proj_dir = tmp_path / "projects" / "-home-user-projects-myapp"
-        subagent_dir = proj_dir / "deadbeef-1234-5678-9abc-def012345678" / "subagents"
-        subagent_dir.mkdir(parents=True)
+        proj_dir.mkdir(parents=True)
         import shutil
-        dest_name = "aaaabbbb-cccc-dddd-eeee-ffffffffffff.jsonl"
-        shutil.copy(sample_session_path, subagent_dir / dest_name)
+
+        # Create parent session file
+        parent_id = "deadbeef-1234-5678-9abc-def012345678"
+        shutil.copy(sample_session_path, proj_dir / f"{parent_id}.jsonl")
+
+        # Create subagent file
+        subagent_dir = proj_dir / parent_id / "subagents"
+        subagent_dir.mkdir(parents=True)
+        shutil.copy(
+            sample_session_path,
+            subagent_dir / "agent-abc123.jsonl",
+        )
 
         count = index_transcripts(db_conn, tmp_path / "projects")
-        assert count == 0
+        # Should index both parent and subagent
+        assert count == 2
+
+        # Subagent should have parent_session_id set
+        sub = get_session(db_conn, "agent-abc123")
+        assert sub is not None
+        assert sub["parent_session_id"] == parent_id
+
+        # Parent should list subagent
+        parent = get_session(db_conn, parent_id)
+        assert "agent-abc123" in parent["subagent_session_ids"]
 
     def test_incremental_skips_unchanged(
         self, db_conn: sqlite3.Connection, sample_session_path: Path, tmp_path: Path

@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     keywords      TEXT DEFAULT '',
     tags          TEXT DEFAULT '',
     source        TEXT DEFAULT 'transcript',
-    indexed_at    TEXT NOT NULL
+    indexed_at    TEXT NOT NULL,
+    parent_session_id TEXT DEFAULT ''
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS sessions_fts USING fts5(
@@ -49,6 +50,12 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    # Migrate: add parent_session_id if missing (existing DBs)
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(sessions)")}
+    if "parent_session_id" not in columns:
+        conn.execute(
+            "ALTER TABLE sessions ADD COLUMN parent_session_id TEXT DEFAULT ''"
+        )
     conn.commit()
     return conn
 
@@ -62,8 +69,8 @@ def upsert_session(conn: sqlite3.Connection, session: SessionData, source: str) 
             session_id, project_path, project_name, first_prompt,
             user_prompts, assistant_text, files_changed, commands_run,
             commit_messages, git_branch, created_at, modified_at,
-            message_count, source, indexed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            message_count, source, indexed_at, parent_session_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(session_id) DO UPDATE SET
             project_path = excluded.project_path,
             project_name = excluded.project_name,
@@ -94,7 +101,8 @@ def upsert_session(conn: sqlite3.Connection, session: SessionData, source: str) 
                 THEN excluded.message_count
                 ELSE sessions.message_count END,
             source = excluded.source,
-            indexed_at = excluded.indexed_at
+            indexed_at = excluded.indexed_at,
+            parent_session_id = excluded.parent_session_id
         """,
         (
             session.session_id,
@@ -112,6 +120,7 @@ def upsert_session(conn: sqlite3.Connection, session: SessionData, source: str) 
             session.message_count,
             source,
             now,
+            session.parent_session_id,
         ),
     )
     conn.commit()
@@ -159,13 +168,20 @@ def upsert_fts(conn: sqlite3.Connection, session_id: str) -> None:
 
 
 def get_session(conn: sqlite3.Connection, session_id: str) -> dict | None:
-    """Get a single session by ID."""
+    """Get a single session by ID, including subagent session IDs if any."""
     row = conn.execute(
         "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
     ).fetchone()
     if row is None:
         return None
-    return dict(row)
+    result = dict(row)
+    # Include subagent session IDs for parent sessions
+    subagent_rows = conn.execute(
+        "SELECT session_id FROM sessions WHERE parent_session_id = ?",
+        (session_id,),
+    ).fetchall()
+    result["subagent_session_ids"] = [r[0] for r in subagent_rows]
+    return result
 
 
 def list_sessions(
@@ -266,12 +282,16 @@ def report_sessions(
     until: str | None = None,
     project_path_prefix: str | None = None,
     limit: int = 100,
+    include_subagents: bool = False,
 ) -> dict:
     """Get sessions grouped by project for a date range."""
     from claude_session_index.config import since_cutoff, until_cutoff
 
     conditions: list[str] = []
     params: list[str | int] = []
+
+    if not include_subagents:
+        conditions.append("parent_session_id = ''")
 
     since_iso = None
     until_iso = None

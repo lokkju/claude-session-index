@@ -81,54 +81,74 @@ def index_sessions_index(
     return count
 
 
+def _index_jsonl_file(
+    conn: sqlite3.Connection,
+    jsonl_file: Path,
+    since_cutoff: datetime | None,
+    parent_session_id: str = "",
+) -> bool:
+    """Index a single JSONL file. Returns True if indexed."""
+    try:
+        stat = jsonl_file.stat()
+    except OSError:
+        return False
+    if stat.st_size > MAX_FILE_SIZE:
+        return False
+
+    file_key = str(jsonl_file)
+    stored_mtime = get_file_mtime(conn, file_key)
+    current_mtime = stat.st_mtime
+    if stored_mtime is not None and stored_mtime >= current_mtime:
+        return False
+
+    if since_cutoff:
+        mod_dt = datetime.fromtimestamp(current_mtime, tz=UTC)
+        if mod_dt < since_cutoff:
+            return False
+
+    session = extract_session(jsonl_file)
+    if session is None:
+        return False
+
+    # For subagent files, override session_id with filename stem
+    # (the JSONL's sessionId field is the parent's, not the subagent's)
+    if parent_session_id:
+        session.session_id = jsonl_file.stem
+        session.parent_session_id = parent_session_id
+
+    upsert_session(conn, session, source="transcript")
+    set_file_mtime(conn, file_key, current_mtime)
+    return True
+
+
 def index_transcripts(
     conn: sqlite3.Connection,
     projects_dir: Path,
     since_cutoff: datetime | None = None,
 ) -> int:
-    """Phase 2: Index session transcript JSONL files."""
+    """Phase 2: Index session transcript JSONL files and subagents."""
     count = 0
     for proj_dir in projects_dir.iterdir():
         if not proj_dir.is_dir():
             continue
 
         for jsonl_file in proj_dir.glob("*.jsonl"):
-            # Only process UUID-named files
+            # Only process UUID-named files at top level
             if not _UUID_RE.match(jsonl_file.stem):
                 continue
 
-            # Skip files in subagent directories
-            if "subagents" in jsonl_file.parts:
-                continue
+            if _index_jsonl_file(conn, jsonl_file, since_cutoff):
+                count += 1
 
-            # Skip oversized files
-            try:
-                stat = jsonl_file.stat()
-            except OSError:
-                continue
-            if stat.st_size > MAX_FILE_SIZE:
-                continue
-
-            # Incremental: skip unchanged files
-            file_key = str(jsonl_file)
-            stored_mtime = get_file_mtime(conn, file_key)
-            current_mtime = stat.st_mtime
-            if stored_mtime is not None and stored_mtime >= current_mtime:
-                continue
-
-            # Apply since filter
-            if since_cutoff:
-                mod_dt = datetime.fromtimestamp(current_mtime, tz=UTC)
-                if mod_dt < since_cutoff:
-                    continue
-
-            session = extract_session(jsonl_file)
-            if session is None:
-                continue
-
-            upsert_session(conn, session, source="transcript")
-            set_file_mtime(conn, file_key, current_mtime)
-            count += 1
+            # Also index subagent files for this session
+            subagents_dir = proj_dir / jsonl_file.stem / "subagents"
+            if subagents_dir.is_dir():
+                for sub_file in subagents_dir.glob("*.jsonl"):
+                    if _index_jsonl_file(
+                        conn, sub_file, since_cutoff,
+                        parent_session_id=jsonl_file.stem,
+                    ):
+                        count += 1
 
     return count
 
