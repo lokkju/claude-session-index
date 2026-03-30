@@ -3,6 +3,13 @@ from __future__ import annotations
 import sqlite3
 
 
+def _sanitize_fts_query(query: str) -> str:
+    """Quote each term so FTS5 special characters are treated as literals."""
+    terms = query.split()
+    quoted = ['"' + t.replace('"', '""') + '"' for t in terms]
+    return " ".join(quoted)
+
+
 def search_sessions(
     conn: sqlite3.Connection,
     query: str,
@@ -14,9 +21,9 @@ def search_sessions(
     conditions: list[str] = []
     params: list[str | int] = []
 
-    # FTS match
+    # FTS match — quote terms to prevent special char interpretation
     conditions.append("sessions_fts MATCH ?")
-    params.append(query)
+    params.append(_sanitize_fts_query(query))
 
     fts_where = " AND ".join(conditions)
 
