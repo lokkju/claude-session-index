@@ -10,7 +10,6 @@ from claude_session_index.db import (
     get_stats,
     init_db,
     list_sessions,
-    rebuild_fts,
     report_sessions,
     set_file_mtime,
     upsert_session,
