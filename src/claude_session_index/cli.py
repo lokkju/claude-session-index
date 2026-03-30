@@ -104,6 +104,64 @@ def stats(
 
 
 @app.command()
+def report(
+    since: str = typer.Option("1d", "--since", help="Start of range (duration or ISO date)"),
+    until: str | None = typer.Option(None, "--until", help="End of range (ISO date)"),
+    project_path: str | None = typer.Option(
+        None, "--project-path", help="Filter to sessions under this path prefix"
+    ),
+    limit: int = typer.Option(100, "--limit", help="Max sessions per project"),
+    output_json: bool = typer.Option(False, "--json", help="JSON output"),
+) -> None:
+    """Report sessions worked on within a date range, grouped by project."""
+    from claude_session_index.db import init_db, report_sessions
+
+    conn = init_db(DB_PATH)
+    try:
+        result = report_sessions(
+            conn, since=since, until=until,
+            project_path_prefix=project_path, limit=limit,
+        )
+    finally:
+        conn.close()
+
+    if output_json:
+        typer.echo(json.dumps(result, indent=2))
+        return
+
+    if not result["projects"]:
+        typer.echo("No sessions found for this range.")
+        return
+
+    typer.echo(f"# Work Report (since {since})\n")
+
+    for proj_name, sessions in result["projects"].items():
+        typer.echo(f"## {proj_name} ({len(sessions)} sessions)\n")
+        for s in sessions:
+            branch = s["git_branch"] or "unknown"
+            start = (s["created_at"] or "")[:16].replace("T", " ")
+            end = (s["modified_at"] or "")[:16].replace("T", " ")
+            msgs = s["message_count"]
+            title = s["summary"] or s["first_prompt"] or "(no prompt)"
+            typer.echo(
+                f"### {branch} — {start} to {end} ({msgs} messages)"
+            )
+            typer.echo(title)
+
+            if s["files_changed"]:
+                files_str = ", ".join(
+                    Path(f).name for f in s["files_changed"][:10]
+                )
+                typer.echo(f"- Files: {files_str}")
+
+            if s["commit_messages"]:
+                for cm in s["commit_messages"]:
+                    typer.echo(f"- Commit: {cm}")
+
+            typer.echo()
+
+
+@app.command()
 def serve() -> None:
     """Start the MCP stdio server."""
     from claude_session_index.server import main
