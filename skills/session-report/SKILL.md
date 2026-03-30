@@ -34,11 +34,18 @@ description: >
 
 3. **Drill into sessions** that need more detail:
    ```bash
+   claude-session-index show <session_id> --json
+   ```
+   Returns full session content: user prompts, assistant text, commands
+   run, files changed, commit messages, and subagent session IDs.
+
+   To search by topic instead of ID:
+   ```bash
    claude-session-index search "<query>" --json
    ```
-   If the `session-index` MCP server is available, use
-   `get_session_detail(session_id="...")` for full session content
-   (user prompts, assistant text, all commands).
+
+   If the `session-index` MCP server is available, you can alternatively
+   use `get_session_detail(session_id="...")`.
 
    If the tool is not installed, tell the user:
    ```

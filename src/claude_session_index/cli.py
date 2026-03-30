@@ -73,6 +73,79 @@ def search(
 
 
 @app.command()
+def show(
+    session_id: str = typer.Argument(..., help="Session UUID"),
+    output_json: bool = typer.Option(False, "--json", help="JSON output"),
+) -> None:
+    """Show full details for a session, including subagent session IDs."""
+    from claude_session_index.db import get_session, init_db
+
+    conn = init_db(DB_PATH)
+    try:
+        result = get_session(conn, session_id)
+    finally:
+        conn.close()
+
+    if result is None:
+        typer.echo(f"Session {session_id} not found.")
+        raise typer.Exit(1)
+
+    if output_json:
+        typer.echo(json.dumps(result, indent=2))
+        return
+
+    typer.echo(f"Session:  {result['session_id']}")
+    typer.echo(f"Project:  {result['project_name']} ({result['project_path']})")
+    typer.echo(f"Branch:   {result['git_branch']}")
+    typer.echo(f"Created:  {result['created_at']}")
+    typer.echo(f"Modified: {result['modified_at']}")
+    typer.echo(f"Messages: {result['message_count']}")
+    typer.echo(f"Source:   {result['source']}")
+    if result.get("parent_session_id"):
+        typer.echo(f"Parent:   {result['parent_session_id']}")
+    typer.echo()
+
+    if result.get("summary"):
+        typer.echo(f"## Summary\n{result['summary']}\n")
+
+    if result["first_prompt"]:
+        typer.echo(f"## First Prompt\n{result['first_prompt']}\n")
+
+    if result["commit_messages"]:
+        typer.echo("## Commits")
+        for cm in result["commit_messages"].split("\n"):
+            if cm.strip():
+                typer.echo(f"  {cm.strip()}")
+        typer.echo()
+
+    if result["files_changed"]:
+        typer.echo("## Files Changed")
+        for f in result["files_changed"].split("\n"):
+            if f.strip():
+                typer.echo(f"  {f.strip()}")
+        typer.echo()
+
+    if result.get("subagent_session_ids"):
+        typer.echo(f"## Subagents ({len(result['subagent_session_ids'])})")
+        for sid in result["subagent_session_ids"]:
+            typer.echo(f"  {sid}")
+        typer.echo()
+
+    if result["user_prompts"]:
+        typer.echo("## User Prompts")
+        typer.echo(result["user_prompts"][:2000])
+        if len(result["user_prompts"]) > 2000:
+            typer.echo("  ... (truncated)")
+        typer.echo()
+
+    if result["commands_run"]:
+        typer.echo("## Commands Run")
+        for cmd in result["commands_run"].split("\n"):
+            if cmd.strip():
+                typer.echo(f"  $ {cmd.strip()}")
+
+
+@app.command()
 def stats(
     since: str | None = typer.Option(None, "--since", help="Filter by date"),
     output_json: bool = typer.Option(False, "--json", help="JSON output"),

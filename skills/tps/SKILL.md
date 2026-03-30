@@ -42,13 +42,14 @@ description: >
 4. **Review session data.** For each project:
    - Note session count, branches worked on, and commit messages
    - If a session has a `summary`, prefer it over `first_prompt`
-   - For more detail on a session, run:
+   - For more detail on a specific session, run:
+     ```bash
+     claude-session-index show <session_id> --json
+     ```
+     Or search by topic:
      ```bash
      claude-session-index search "<topic>" --json
      ```
-     Or if the MCP server is available, call `get_session_detail`
-     with the `session_id` for full user prompts, assistant text,
-     and commands run.
    - Check `subagent_session_ids` in session data — if present,
      the session used subagent-driven development. The subagent
      sessions contain the actual implementation details and commits.
