@@ -1,20 +1,24 @@
-[
-  {
-    "event": "SessionStart",
-    "hooks": [
+{
+  "hooks": {
+    "SessionStart": [
       {
-        "type": "command",
-        "command": "bash $CLAUDE_PLUGIN_ROOT/hooks/session-start.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\""
+          }
+        ]
       }
-    ]
-  },
-  {
-    "event": "Stop",
-    "hooks": [
+    ],
+    "Stop": [
       {
-        "type": "command",
-        "command": "bash $CLAUDE_PLUGIN_ROOT/hooks/session-end.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-end.sh\""
+          }
+        ]
       }
     ]
   }
-]
+}
