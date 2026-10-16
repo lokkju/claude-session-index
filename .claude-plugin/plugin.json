@@ -1,5 +1,5 @@
 {
-  "name": "claude-session-index",
+  "name": "session-history",
   "description": "Index, search, and report on Claude Code sessions. Includes TPS skill for work summarization.",
   "version": "0.3.0",
   "author": { "name": "lokkju", "url": "https://github.com/lokkju" },

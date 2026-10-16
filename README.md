@@ -41,28 +41,39 @@ claude-session-index stats
 
 ## Claude Code Plugin
 
-This repo is also a Claude Code plugin with two skills:
+This repo is also a Claude Code plugin, `session-history`, with two skills:
 
 - **session-report** — Query the index for sessions from a time period
 - **tps** (Total Project Summary) — Gather session data and present flexible work summaries (standup notes, daily journals, weekly recaps)
 
 ### Install as Plugin
 
-Add the `lokkju` marketplace to your Claude Code settings, then install:
+Add the `lokkju` marketplace, then install the plugin:
 
 ```bash
 # Add marketplace (one-time)
-claude plugin marketplace add lokkju --source github --repo lokkju/skills-marketplace
+claude plugin marketplace add lokkju/skills
 
 # Install plugin
-claude plugin install claude-session-index@lokkju
+claude plugin install session-history@lokkju
 ```
 
-Or install directly from the repo:
+Or load it straight from a checkout for one session:
 
 ```bash
-claude plugin add /path/to/claude-session-index
+claude --plugin-dir /path/to/claude-session-index
 ```
+
+The plugin used to be called `claude-session-index`, a name Claude Code now reserves. If you
+installed it under that name, remove it and install it again under the new one:
+
+```bash
+claude plugin uninstall claude-session-index@lokkju
+claude plugin marketplace update lokkju
+claude plugin install session-history@lokkju
+```
+
+The CLI and Python package keep the `claude-session-index` name; only the plugin changed.
 
 ### Auto-Indexing
 
