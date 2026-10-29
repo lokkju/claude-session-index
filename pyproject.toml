@@ -11,7 +11,7 @@ license = {file = "LICENSE"}
 license-files = ["LICENSE"]
 dependencies = [
     "typer>=0.9",
-    "fastmcp>=2.0",
+    "fastmcp>=3.4.10",
 ]
 
 [dependency-groups]
